@@ -664,6 +664,24 @@ func (v Value) Key(key string) Value {
 	return v.r.resolve(v.ptr, x[name(key)])
 }
 
+// KeyId returns the object identifier of specified entry, or 0 if it is not a
+// reference. Use it to detect cycles when traversing PDF Value graphs.
+func (v Value) KeyId(key string) uint32 {
+	x, ok := v.data.(dict)
+	if !ok {
+		strm, ok := v.data.(stream)
+		if !ok {
+			return 0
+		}
+		x = strm.hdr
+	}
+	ptr, ok := x[name(key)].(objptr)
+	if !ok {
+		return 0
+	}
+	return ptr.id
+}
+
 // Keys returns a sorted list of the keys in the dictionary v.
 // If v is a stream, Keys applies to the stream's header dictionary.
 // If v.Kind() != Dict and v.Kind() != Stream, Keys returns nil.
@@ -693,6 +711,20 @@ func (v Value) Index(i int) Value {
 		return Value{}
 	}
 	return v.r.resolve(v.ptr, x[i])
+}
+
+// IndexId returns the object identifier of specified entry, or 0 if it is not a
+// reference. Use it to detect cycles when traversing PDF Value graphs.
+func (v Value) IndexId(i int) uint32 {
+	x, ok := v.data.(array)
+	if !ok || i < 0 || i >= len(x) {
+		return 0
+	}
+	ptr, ok := x[i].(objptr)
+	if !ok {
+		return 0
+	}
+	return ptr.id
 }
 
 // Len returns the length of the array v.
