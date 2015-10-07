@@ -787,7 +787,6 @@ func (r *Reader) resolve(parent objptr, x interface{}) Value {
 			def, ok := obj.(objdef)
 			if !ok {
 				panic(fmt.Errorf("loading %v: found %T instead of objdef", ptr, obj))
-				return Value{}
 			}
 			if def.ptr != ptr {
 				panic(fmt.Errorf("loading %v: found %v", ptr, def.ptr))
@@ -1084,7 +1083,7 @@ func decryptStream(key []byte, useAES bool, ptr objptr, rd io.Reader) io.Reader 
 		rd = &cbcReader{cbc: cbc, rd: rd, buf: make([]byte, 16)}
 	} else {
 		c, _ := rc4.NewCipher(key)
-		rd = &cipher.StreamReader{c, rd}
+		rd = &cipher.StreamReader{S: c, R: rd}
 	}
 	return rd
 }
