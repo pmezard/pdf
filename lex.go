@@ -373,6 +373,67 @@ func isReal(s string) bool {
 	return ndot == 1
 }
 
+// Token exposes lexer internal token representation. Value is a string for
+// keyword, name and strings. It is a bool for bool, an int64 for int64, a
+// float64 for float64.
+//
+// Kind is a stringification of the the type name, except for keywords and
+// names where it contains "keyword" and "name" respectively. This avoided to
+// export internal lexer types.
+type Token struct {
+	Kind  string
+	Value interface{}
+}
+
+func convertToken(t token) (interface{}, string) {
+	switch t.(type) {
+	case name:
+		return string(t.(name)), "name"
+	case keyword:
+		return string(t.(keyword)), "keyword"
+	case string:
+		return t, "string"
+	case bool:
+		return t, "bool"
+	case int64:
+		return t, "int64"
+	case float64:
+		return t, "float64"
+	}
+	panic(fmt.Sprintf("unknown type %T", t))
+}
+
+func panicTokenize(r io.Reader) []Token {
+	tokens := []Token{}
+	buf := newBuffer(r, 0)
+	buf.allowEOF = true
+	for {
+		t := buf.readToken()
+		if err, ok := t.(error); ok && err == io.EOF {
+			break
+		}
+		value, kind := convertToken(t)
+		tokens = append(tokens, Token{
+			Kind:  kind,
+			Value: value,
+		})
+	}
+	return tokens
+}
+
+// Tokenize tokenizes a PDF text stream.
+//
+// Unlike the original tokenizer, it does not panic.
+func Tokenize(r io.Reader) (tokens []Token, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%s", r)
+		}
+	}()
+	tokens = panicTokenize(r)
+	return tokens, err
+}
+
 // An object is a PDF syntax object, one of the following Go types:
 //
 //	bool, a PDF boolean
